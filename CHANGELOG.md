@@ -2,6 +2,18 @@
 
 Release notes are written from the commit messages when a release is made, so nobody edits this file by hand. See [docs/releasing.md](docs/releasing.md).
 
+## [0.3.0](https://github.com/WasathTheekshana/singlish-caption-studio/compare/singlish-caption-studio-v0.2.1...singlish-caption-studio-v0.3.0) (2026-11-08)
+
+
+### Features
+
+* save the captions as an .srt file for uploading ([d717291](https://github.com/WasathTheekshana/singlish-caption-studio/commit/d7172918d279beceab8727f79fc897a6d52219f7))
+
+
+### Bug Fixes
+
+* **ui:** fill spare window height instead of leaving the bottom empty ([9424434](https://github.com/WasathTheekshana/singlish-caption-studio/commit/9424434d7b2c542a8ea59100ea9314fc333826d7))
+
 ## [0.2.1](https://github.com/WasathTheekshana/singlish-caption-studio/compare/singlish-caption-studio-v0.2.0...singlish-caption-studio-v0.2.1) (2026-11-08)
 
 

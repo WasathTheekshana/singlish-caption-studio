@@ -22,11 +22,15 @@ Only the latest release gets security fixes.
 - **A damaged media file cannot crash the app.** Decoding runs behind a guard that turns a decoder failure into an ordinary error message.
 - **Network use** is one fixed HTTPS address. Redirects are turned off, so the API key header can never be forwarded to another address. Calls have timeouts, and replies have size limits. A reply that is not exactly what was expected is treated as a failure, including when checking a key.
 - **Edits to your project** are checked in memory first, backed up, and written atomically. If writing the second copy of a draft fails, the first is put back. Only one job can touch a project at a time, and a restore refuses a backup that is not valid JSON.
+- **Updates are verified before they are installed.** The app contains the public half of a signing key. An update is installed only if its signature matches that key, and only if the signature names the exact version being offered, so a tampered update list cannot hand out an older build. The update list and the download must both use HTTPS. The installer is never run without you pressing the button, and never while a caption run is in progress. The page cannot call the updater directly, only the app's own fixed commands.
+- **The signing key** is kept out of the repository. It lives in GitHub Actions secrets, where only the build step of the release workflow can read it, and the release build uses no caches.
 - **Dependencies** are checked against the RustSec advisory database in CI, and the GitHub Actions used for builds are pinned to exact commits. Release builds use no caches and start from a clean state.
 
 ## Known limits
 
 - The Windows installer is not code signed yet, so SmartScreen warns on first run. Verify downloads with the `SHA256SUMS.txt` file and the build attestation on the release page.
 - The app edits CapCut project files in place. A backup is made first, but nothing about CapCut's file format is guaranteed.
+- If the update signing key were ever lost or leaked, installed apps could not be moved to a build signed with a new key automatically. They would need a fresh manual install. The key is backed up for that reason, and a leak would be handled by publishing a new release and warning users.
+- The first version that has updates built in has to be installed by hand once. Older versions do not know how to update themselves.
 - The API key is held in ordinary memory while a request is being made. It is not wiped afterwards.
 - `cargo audit` reports two warnings for crates that only matter on other operating systems (an unmaintained macro helper and a Linux-only GUI library). They are not part of the Windows build.

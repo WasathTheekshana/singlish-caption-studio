@@ -45,6 +45,7 @@ record usage                   usage.rs
 | `src/secrets.rs` | The API key in Windows Credential Manager. |
 | `src/store.rs` | Settings, glossary and cache locations. Atomic writes and size-limited reads. |
 | `src/usage.rs` | The local usage log. |
+| `src/updater.rs` | Checks GitHub for a newer release and installs it. A thin, tested wrapper around the Tauri updater plugin, which the page cannot call directly. |
 | `src/fonts.rs` | Installed fonts, read from the registry. |
 | `src/validate.rs` | Input checks for project names and style settings. |
 

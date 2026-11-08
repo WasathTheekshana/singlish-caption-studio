@@ -41,15 +41,21 @@ It is a small Windows app. You pick a CapCut project, press one button, and the 
 
 ## Download
 
-Get the installer from the [Releases](https://github.com/WasathTheekshana/singlish-caption-studio/releases/latest) page: `Singlish Caption Studio_x.y.z_x64-setup.exe`.
+Get the installer from the [Releases](https://github.com/WasathTheekshana/singlish-caption-studio/releases/latest) page: `Singlish-Caption-Studio_x.y.z_x64-setup.exe`.
 
 It installs for your user only, so it does not ask for administrator rights.
 
 The installer is not code signed yet, so Windows SmartScreen may warn you the first time. Each release also has a `SHA256SUMS.txt` file so you can check the download, and the build is attested by GitHub. To check it:
 
 ```
-gh attestation verify "Singlish Caption Studio_0.1.0_x64-setup.exe" --repo WasathTheekshana/singlish-caption-studio
+gh attestation verify Singlish-Caption-Studio_x.y.z_x64-setup.exe --repo WasathTheekshana/singlish-caption-studio
 ```
+
+## Updates
+
+The app checks for a newer version when it starts. If there is one, a note appears at the top with what changed and an **Update now** button. Nothing is installed until you press it, and it will not update while a caption run is going. Every update is signed, and the app refuses one that does not verify.
+
+You can turn the automatic check off, or check by hand, in Settings under About. Versions older than the first one with updates built in cannot update themselves, so install that one by hand once.
 
 ## First run
 

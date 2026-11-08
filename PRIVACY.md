@@ -20,12 +20,20 @@ The app asks for your permission first. Nothing is sent unless the consent box i
 
 Two buttons open a web page in your browser (the ElevenLabs API keys page and the Buy Me a Coffee page). They only open those two fixed addresses.
 
+## Update checks
+
+When the app starts it asks GitHub whether a newer version exists. This is the only other place the app talks to, and you can turn it off in Settings, then About, by unticking "Check for updates when the app starts". There is also a "Check for updates" button there that does the same thing on demand.
+
+The request is a plain download of one small file, `latest.json`, from this project's GitHub releases page. GitHub sees your IP address and the name and version of the update library, like any website would. The app does not send its own version, your settings, your projects or anything else about you.
+
+The update is never installed on its own. If a newer version is found, the app shows it and waits for you to press the button. Only then is the installer downloaded from GitHub, and it is installed only if its signature checks out (see [SECURITY.md](SECURITY.md)). GitHub's own privacy statement covers what it does with its server logs.
+
 ## What stays on your computer
 
 | What | Where | Notes |
 | --- | --- | --- |
 | ElevenLabs API key | Windows Credential Manager | Encrypted by Windows for your user account. Never written to a file, never shown in the app after you save it. |
-| Settings (fonts, sizes, color, position, price) | `%APPDATA%\Singlish Caption Studio\config.json` | |
+| Settings (fonts, sizes, color, position, price, whether to check for updates) | `%APPDATA%\Singlish Caption Studio\config.json` | |
 | Glossary | `%APPDATA%\Singlish Caption Studio\glossary.json` | |
 | Usage log | `%APPDATA%\Singlish Caption Studio\usage.json` | Seconds, request counts, word counts and clip names. No audio and no caption text. The newest 200 runs are kept. |
 | Transcript cache | `%LOCALAPPDATA%\Singlish Caption Studio Data\cache` | The words and timings ElevenLabs returned, so the same audio is never paid for twice. |

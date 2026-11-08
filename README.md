@@ -132,11 +132,11 @@ Thank you to everyone who has helped build this.
 
 ## Star history
 
-<a href="https://star-history.com/#WasathTheekshana/singlish-caption-studio&Date">
+<a href="https://star-history.com/#wasaththeekshana/singlish-caption-studio&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=WasathTheekshana/singlish-caption-studio&type=Date&theme=dark">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=WasathTheekshana/singlish-caption-studio&type=Date">
-    <img alt="Star history chart" src="https://api.star-history.com/svg?repos=WasathTheekshana/singlish-caption-studio&type=Date">
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=wasaththeekshana/singlish-caption-studio&type=Date&theme=dark">
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=wasaththeekshana/singlish-caption-studio&type=Date">
+    <img alt="Star history chart" src="https://api.star-history.com/svg?repos=wasaththeekshana/singlish-caption-studio&type=Date">
   </picture>
 </a>
 

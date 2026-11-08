@@ -107,6 +107,61 @@ jobs:
       - name: Test
         run: cargo test
 
+      # The Tauri CLI downloads NSIS from a github.com link that can fail with a 504 for hours. This
+      # fetches the same files through the GitHub API instead and checks their hashes. The versions and
+      # hashes are the ones the pinned CLI (tauri-cli 2.12.4, tauri-bundler 2.10.4) expects, see
+      # NSIS_URL, NSIS_SHA1 and NSIS_TAURI_UTILS_* in tauri-bundler's src/bundle/windows/nsis/mod.rs.
+      # Check them when the CLI pin is raised. The script is inline so that a repair run of an older
+      # tag still gets it.
+      - name: Install the NSIS toolset
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $nsisZip = @{ Repo = "tauri-apps/binary-releases"; Tag = "nsis-3.13"; File = "nsis-3.13.zip"; Sha1 = "DB14F8AF2EA346B786C6AE19343F61AAF5E09B8E" }
+          $utils = @{ Repo = "tauri-apps/nsis-tauri-utils"; Tag = "nsis_tauri_utils-v0.5.3"; File = "nsis_tauri_utils.dll"; Sha1 = "75197FEE3C6A814FE035788D1C34EAD39349B860" }
+
+          $tools = Join-Path $env:LOCALAPPDATA "tauri"
+          $nsis = Join-Path $tools "NSIS"
+          $work = Join-Path ([IO.Path]::GetTempPath()) ("nsis-" + [Guid]::NewGuid().ToString("N"))
+          New-Item -ItemType Directory -Force $work, $tools | Out-Null
+
+          function Get-Verified($item) {
+              for ($try = 1; $try -le 6; $try++) {
+                  Remove-Item (Join-Path $work $item.File) -ErrorAction SilentlyContinue
+                  gh release download $item.Tag --repo $item.Repo --pattern $item.File --dir $work
+                  $path = Join-Path $work $item.File
+                  if ($LASTEXITCODE -eq 0 -and (Test-Path $path)) {
+                      $hash = (Get-FileHash $path -Algorithm SHA1).Hash
+                      if ($hash -eq $item.Sha1) { return $path }
+                      throw "$($item.File) has an unexpected hash ($hash). Not using it."
+                  }
+                  Write-Host "Download of $($item.File) failed (attempt $try of 6). Waiting before the next try."
+                  Start-Sleep -Seconds (10 * $try)
+              }
+              throw "Could not download $($item.File) from $($item.Repo)."
+          }
+
+          try {
+              $zip = Get-Verified $nsisZip
+              $dll = Get-Verified $utils
+
+              if (Test-Path $nsis) { Remove-Item $nsis -Recurse -Force }
+              $extract = Join-Path $work "extract"
+              Expand-Archive -LiteralPath $zip -DestinationPath $extract
+              Move-Item (Join-Path $extract "nsis-3.13") $nsis
+
+              $target = Join-Path $nsis "Plugins\x86-unicode\additional"
+              New-Item -ItemType Directory -Force $target | Out-Null
+              Copy-Item $dll (Join-Path $target "nsis_tauri_utils.dll")
+              Write-Host "NSIS toolset is ready at $nsis"
+          }
+          finally {
+              Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
+          }
+
       # Building compiles hundreds of dependencies, and their build scripts run code. So this step has
       # no access to the signing key at all, and signing happens in the next step.
       - name: Build the installer

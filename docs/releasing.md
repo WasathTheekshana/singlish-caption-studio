@@ -83,6 +83,8 @@ The key reaches only the step that signs the finished installer. Building is a s
 
 An optional extra layer: store the two secrets as **environment secrets** on a GitHub environment (for example `release`) that requires your approval, and add `environment: release` to the build job. Then even a bad change to the workflow cannot use the key until you approve the run.
 
+The build also installs the NSIS packaging toolset itself, in its own step in `release.yml`. The Tauri CLI would download it from a plain github.com link, and those links sometimes fail with a 504 for hours. The step gets the same files through the GitHub API and checks their hashes. When you raise the pinned Tauri CLI version, check that the file versions and hashes in that step still match the CLI's.
+
 To build an installer yourself without the key, add `--config tauri.unsigned.conf.json` to `cargo tauri build`. It switches the update signing off. Such an installer works, but it is not an official release and cannot be offered as an update.
 
 ### The first release with updates

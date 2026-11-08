@@ -12,6 +12,7 @@ mod pipeline;
 mod secrets;
 mod store;
 mod text;
+mod updater;
 mod usage;
 mod validate;
 
@@ -331,6 +332,43 @@ async fn open_link(which: String) -> Res<()> {
 }
 
 #[tauri::command]
+async fn check_update(app: AppHandle, pending: tauri::State<'_, updater::Pending>) -> Res<Value> {
+    updater::check(&app, &pending).await
+}
+
+#[tauri::command]
+async fn install_update(app: AppHandle, pending: tauri::State<'_, updater::Pending>) -> Res<()> {
+    // Never replace the app in the middle of a caption run.
+    if JOB_RUNNING
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return Err("A caption job is running. Wait for it to finish, then update.".into());
+    }
+    let _guard = JobGuard;
+    updater::install(&app, &pending).await
+}
+
+#[tauri::command]
+async fn get_update_settings() -> Res<Value> {
+    blocking(|| {
+        let cfg = store::load_config(&fonts::installed());
+        Ok(json!({"auto_check": cfg.auto_update_check, "version": env!("CARGO_PKG_VERSION")}))
+    })
+    .await
+}
+
+#[tauri::command]
+async fn set_auto_update_check(enabled: bool) -> Res<()> {
+    blocking(move || {
+        let mut cfg = store::load_config(&fonts::installed());
+        cfg.auto_update_check = enabled;
+        store::save_config(&cfg)
+    })
+    .await
+}
+
+#[tauri::command]
 async fn start_caption(
     app: AppHandle,
     folder: String,
@@ -367,6 +405,8 @@ fn navigation_allowed(url: &tauri::Url) -> bool {
 
 fn main() {
     let result = tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(updater::Pending::default())
         .setup(|app| {
             let cfg = app
                 .config()
@@ -399,6 +439,10 @@ fn main() {
             set_price,
             app_info,
             open_link,
+            check_update,
+            install_update,
+            get_update_settings,
+            set_auto_update_check,
             start_caption
         ])
         .run(tauri::generate_context!());

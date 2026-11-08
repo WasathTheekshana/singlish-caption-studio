@@ -17,6 +17,8 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", default-features = false, features = ["wry", "compression"] }
+# Signed in-app updates. Used from Rust only; the page is never given its commands.
+tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }
 serde = { version = "1", features = ["derive"] }
 # preserve_order keeps CapCut's JSON key order when we rewrite a draft.
 serde_json = { version = "1", features = ["preserve_order"] }

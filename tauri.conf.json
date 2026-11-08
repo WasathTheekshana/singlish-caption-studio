@@ -52,6 +52,19 @@
         "type": "downloadBootstrapper",
         "silent": true
       }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJGMjYxNDcxN0IyQ0NGOEEKUldTS3p5eDdjUlFtTHd0R3BOTmlVdEJmNk1ZQ0V0Uk9pSmZXajh4NnAvTjhBcUV4T25NY1NmN08K",
+      "endpoints": [
+        "https://github.com/WasathTheekshana/singlish-caption-studio/releases/latest/download/latest.json"
+      ],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

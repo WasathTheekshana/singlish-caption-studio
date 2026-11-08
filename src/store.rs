@@ -26,6 +26,13 @@ pub struct AppConfig {
     /// What the user pays per minute of audio, used only to estimate cost on the Usage tab.
     #[serde(default)]
     pub price_per_minute: Option<f64>,
+    /// Look for a new version when the app starts. On unless the user turns it off.
+    #[serde(default = "default_true")]
+    pub auto_update_check: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn env_dir(var: &str) -> Result<PathBuf, String> {
@@ -149,6 +156,7 @@ pub fn default_config(fonts: &[Font]) -> AppConfig {
         },
         setup_done: false,
         price_per_minute: None,
+        auto_update_check: true,
     }
 }
 
@@ -223,6 +231,22 @@ mod tests {
         let json = serde_json::to_string(&cfg).unwrap();
         assert!(json.contains("\"sinhala\"") && json.contains("\"setup_done\""));
         assert_eq!(serde_json::from_str::<AppConfig>(&json).unwrap(), cfg);
+    }
+
+    #[test]
+    fn update_checks_are_on_unless_turned_off() {
+        let old = r#"{"sinhala":{"font":"A","size":17.0},"english":{"font":"B","size":14.0},
+                       "color":[1,1,1],"position_y":-0.45}"#;
+        assert!(
+            serde_json::from_str::<AppConfig>(old)
+                .unwrap()
+                .auto_update_check
+        );
+        let mut cfg = default_config(&[]);
+        assert!(cfg.auto_update_check);
+        cfg.auto_update_check = false;
+        let back: AppConfig = serde_json::from_str(&serde_json::to_string(&cfg).unwrap()).unwrap();
+        assert!(!back.auto_update_check);
     }
 
     #[test]

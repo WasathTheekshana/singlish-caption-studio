@@ -24,6 +24,10 @@
     "allow-set-price",
     "allow-app-info",
     "allow-open-link",
+    "allow-check-update",
+    "allow-install-update",
+    "allow-get-update-settings",
+    "allow-set-auto-update-check",
     "allow-start-caption"
   ]
 }

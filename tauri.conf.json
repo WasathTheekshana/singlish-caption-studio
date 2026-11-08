@@ -32,18 +32,26 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "publisher": "Wasath",
     "copyright": "Copyright (c) 2026 Wasath. MIT License.",
     "shortDescription": "Sinhala and English auto-captions for CapCut",
-    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
     "windows": {
       "nsis": {
         "installMode": "currentUser",
         "compression": "lzma",
         "displayLanguageSelector": false
       },
-      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true }
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      }
     }
   }
 }

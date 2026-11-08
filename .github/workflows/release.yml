@@ -255,16 +255,49 @@ jobs:
           gh release upload $env:TAG release-files/latest.json --clobber
 
       # GitHub can change a file name on upload. Make sure the addresses the app will use really work.
+      # A last look at what users will fetch. GitHub's download links sometimes answer 5xx for a while even
+      # though the files are fine, so this retries first. If the links stay down it falls back to
+      # checking the uploaded files through the API and says so in a warning. A missing file (or any
+      # 4xx answer) still fails the run.
       - name: Check that the published files can be downloaded
         if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
         shell: pwsh
         env:
+          GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
           ASSET: ${{ steps.files.outputs.name }}
         run: |
           $base = "https://github.com/$($env:GH_REPO)/releases/download/$($env:TAG)"
-          foreach ($file in @($env:ASSET, "$($env:ASSET).sig", "SHA256SUMS.txt", "latest.json")) {
-            $response = Invoke-WebRequest -Method Head -Uri "$base/$file" -MaximumRedirection 5
-            Write-Host "$file : HTTP $($response.StatusCode)"
+          $files = @($env:ASSET, "$($env:ASSET).sig", "SHA256SUMS.txt", "latest.json")
+          $listed = gh release view $env:TAG --json assets -q ".assets[].name"
+          foreach ($file in $files) {
+            if ($listed -notcontains $file) {
+              Write-Error "$file is not attached to the release."
+              exit 1
+            }
+          }
+          $linksDown = $false
+          foreach ($file in $files) {
+            $status = 0
+            $tries = if ($linksDown) { 1 } else { 5 }
+            for ($try = 1; $try -le $tries; $try++) {
+              try {
+                $status = [int](Invoke-WebRequest -Method Head -Uri "$base/$file" -MaximumRedirection 5).StatusCode
+              } catch {
+                $status = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+              }
+              if ($status -eq 200) { break }
+              if ($status -ge 400 -and $status -lt 500) { break }
+              if ($try -lt $tries) { Start-Sleep -Seconds (10 * $try) }
+            }
+            Write-Host "$file : HTTP $status"
+            if ($status -ge 400 -and $status -lt 500) {
+              Write-Error "$file answered $status."
+              exit 1
+            }
+            if ($status -ne 200) { $linksDown = $true }
+          }
+          if ($linksDown) {
+            Write-Host "::warning::GitHub's download links kept failing, so the files were checked through the API only. They are attached to the release. The in-app updater may not see this release until the links recover."
           }

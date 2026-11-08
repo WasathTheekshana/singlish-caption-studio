@@ -24,3 +24,7 @@ desktop.ini
 /sandbox/
 /samples/
 *.bak-*
+
+# Python bytecode from the helper scripts
+__pycache__/
+*.pyc

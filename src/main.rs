@@ -406,41 +406,41 @@ fn main() {
         eprintln!("Singlish Caption Studio failed to start: {e}");
         std::process::exit(1);
     }
+}
 
-    #[cfg(test)]
-    mod tests {
-        use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        #[test]
-        fn only_the_apps_own_page_may_be_shown() {
-            for ok in [
-                "http://tauri.localhost/",
-                "https://tauri.localhost/index.html",
-                "tauri://localhost/",
-            ] {
-                assert!(navigation_allowed(&tauri::Url::parse(ok).unwrap()), "{ok}");
-            }
-            for bad in [
-                "https://evil.example/",
-                "http://tauri.localhost.evil.example/",
-                "http://localhost:8080/",
-                "file:///C:/Windows/win.ini",
-                "javascript:alert(1)",
-                "data:text/html,hi",
-            ] {
-                assert!(
-                    !navigation_allowed(&tauri::Url::parse(bad).unwrap()),
-                    "{bad}"
-                );
-            }
+    #[test]
+    fn only_the_apps_own_page_may_be_shown() {
+        for ok in [
+            "http://tauri.localhost/",
+            "https://tauri.localhost/index.html",
+            "tauri://localhost/",
+        ] {
+            assert!(navigation_allowed(&tauri::Url::parse(ok).unwrap()), "{ok}");
         }
+        for bad in [
+            "https://evil.example/",
+            "http://tauri.localhost.evil.example/",
+            "http://localhost:8080/",
+            "file:///C:/Windows/win.ini",
+            "javascript:alert(1)",
+            "data:text/html,hi",
+        ] {
+            assert!(
+                !navigation_allowed(&tauri::Url::parse(bad).unwrap()),
+                "{bad}"
+            );
+        }
+    }
 
-        #[test]
-        fn clip_ids_are_checked() {
-            assert!(segment_id_ok("D1AF8169-B962-4e46-A37C-BEAD56D35555"));
-            for bad in ["", "a b", "x/y", "..", &"a".repeat(65), "a\u{0}b"] {
-                assert!(!segment_id_ok(bad), "{bad:?}");
-            }
+    #[test]
+    fn clip_ids_are_checked() {
+        assert!(segment_id_ok("D1AF8169-B962-4e46-A37C-BEAD56D35555"));
+        for bad in ["", "a b", "x/y", "..", &"a".repeat(65), "a\u{0}b"] {
+            assert!(!segment_id_ok(bad), "{bad:?}");
         }
     }
 }

@@ -114,7 +114,7 @@ The audio of the clips you choose goes to ElevenLabs. Nothing else leaves your c
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Security problems should be reported privately, see [SECURITY.md](SECURITY.md).
+Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Commits and pull request titles follow [Conventional Commits](https://www.conventionalcommits.org/), and releases are made automatically from them, see [docs/releasing.md](docs/releasing.md). Security problems should be reported privately, see [SECURITY.md](SECURITY.md).
 
 ## Contributors
 

@@ -1,0 +1,56 @@
+[package]
+name = "singlish-caption-studio"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+description = "Sinhala and English auto-captions for CapCut"
+authors = ["Wasath"]
+license = "MIT"
+repository = "https://github.com/WasathTheekshana/singlish-caption-studio"
+homepage = "https://github.com/WasathTheekshana/singlish-caption-studio"
+readme = "README.md"
+keywords = ["capcut", "captions", "sinhala", "subtitles"]
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", default-features = false, features = ["wry", "compression"] }
+serde = { version = "1", features = ["derive"] }
+# preserve_order keeps CapCut's JSON key order when we rewrite a draft.
+serde_json = { version = "1", features = ["preserve_order"] }
+uuid = { version = "1", features = ["v4"] }
+sha2 = "0.10"
+winreg = "0.55"
+# Secrets live in Windows Credential Manager, never in a file.
+keyring = { version = "3", features = ["windows-native"] }
+# TLS via rustls; only ever talks to api.elevenlabs.io.
+ureq = { version = "2", features = ["proxy-from-env"] }
+# Pure-Rust audio decoding: no ffmpeg needed.
+symphonia = { version = "0.5", default-features = false, features = [
+    "isomp4", "mkv", "ogg", "wav", "aiff", "aac", "alac", "flac", "mp3", "pcm", "vorbis",
+] }
+
+[features]
+default = ["custom-protocol"]
+# Embeds the UI into the executable (no dev server, no network).
+custom-protocol = ["tauri/custom-protocol"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "warn"
+panic = "warn"
+dbg_macro = "deny"
+todo = "deny"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "unwind"
+strip = true
+overflow-checks = true

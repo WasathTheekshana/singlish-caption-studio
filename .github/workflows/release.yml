@@ -99,26 +99,43 @@ jobs:
           toolchain: stable
 
       # Release builds use no caches. A cache entry could hold a tampered build tool, and this job
-      # publishes what it builds, so it starts clean every time.
+      # publishes what it builds, so it starts clean every time. The tool version is pinned for the
+      # same reason, and is raised on purpose (see docs/releasing.md), never by accident.
       - name: Install the Tauri CLI
-        run: cargo install tauri-cli --version "^2" --locked
+        run: cargo install tauri-cli --version "=2.12.4" --locked
 
       - name: Test
         run: cargo test
 
-      # The signing key is given to this one step only. It is what makes installed apps trust the update.
+      # Building compiles hundreds of dependencies, and their build scripts run code. So this step has
+      # no access to the signing key at all, and signing happens in the next step.
       - name: Build the installer
+        run: cargo tauri build --bundles nsis --config tauri.unsigned.conf.json
+
+      # The only step that sees the signing key, and it runs no project or dependency code, only the
+      # pinned Tauri CLI signing one file. --app-version ties the signature to this exact version.
+      - name: Sign the installer
         shell: pwsh
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           # A secret pasted into GitHub often gains a trailing line break, and the signer rejects that.
           foreach ($name in "TAURI_SIGNING_PRIVATE_KEY", "TAURI_SIGNING_PRIVATE_KEY_PASSWORD") {
             $value = [Environment]::GetEnvironmentVariable($name)
             if ($value) { [Environment]::SetEnvironmentVariable($name, $value.TrimEnd("`r", "`n")) }
           }
-          cargo tauri build --bundles nsis
+          $installer = Get-ChildItem target/release/bundle/nsis -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $installer) {
+            Write-Error "The build did not produce an installer."
+            exit 1
+          }
+          cargo tauri signer sign --app-version $env:VERSION $installer.FullName
+          if (-not (Test-Path "$($installer.FullName).sig")) {
+            Write-Error "The installer was not signed."
+            exit 1
+          }
 
       # GitHub renames files with spaces, so the installer gets a plain name to keep its address predictable.
       - name: Prepare the release files

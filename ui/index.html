@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Singlish Caption Studio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ============================== first-run wizard ============================== -->
+  <main id="view-wizard" hidden>
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"><i></i><i></i></div>
+        <div>
+          <h1>Welcome to Singlish Caption Studio</h1>
+          <p class="muted">Three quick steps and you're ready</p>
+        </div>
+      </div>
+    </header>
+
+    <ol class="wiz-steps" aria-label="Setup progress">
+      <li data-wz="1">CapCut</li><li data-wz="2">ElevenLabs</li><li data-wz="3">Style</li>
+    </ol>
+
+    <section id="wz-1" class="card">
+      <h2>Step 1: CapCut</h2>
+      <p id="wz-capcut-msg" class="notice"></p>
+      <div class="actions">
+        <button id="wz-recheck" class="secondary" type="button">Check again</button>
+        <button id="wz-next-1" class="primary small" type="button" disabled>Continue</button>
+      </div>
+    </section>
+
+    <section id="wz-2" class="card" hidden>
+      <h2>Step 2: ElevenLabs account</h2>
+      <p>Captions are made by ElevenLabs, which turns speech into text. You need your own account and key. You pay ElevenLabs directly for what you use.</p>
+      <ol class="how">
+        <li>Create an account at <b>elevenlabs.io</b>.</li>
+        <li>Open <b>Settings, then API Keys</b> and create a key.</li>
+        <li>Allow <b>only “Speech to Text”</b> and set a credit limit, so the key can do nothing else.</li>
+        <li>Paste the key below.</li>
+      </ol>
+      <div class="actions"><button id="wz-open-keys" class="secondary" type="button">Open the ElevenLabs API keys page</button></div>
+      <label class="field">API key
+        <input id="wz-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key here">
+      </label>
+      <p class="muted small-text">Stored in Windows Credential Manager on this PC and sent only to ElevenLabs. It is never shown again.</p>
+      <p id="wz-key-msg" class="notice" hidden></p>
+      <div class="actions">
+        <button id="wz-save-key" class="primary small" type="button">Save and test key</button>
+        <button id="wz-next-2" class="secondary" type="button" disabled>Continue</button>
+      </div>
+    </section>
+
+    <section id="wz-3" class="card" hidden>
+      <h2>Step 3: Caption style</h2>
+      <p class="muted">Pick the fonts for your captions. You can change these any time.</p>
+      <div class="preview" aria-label="Preview">
+        <div><span id="wz-pv-si">අද අපි </span><span id="wz-pv-en">new phone</span><span id="wz-pv-si2"> එකක් බලමු</span></div>
+        <small class="muted">Approximate preview</small>
+      </div>
+      <label class="field">Sinhala font <select id="wz-si-font"></select></label>
+      <label class="field">Sinhala size <output id="wz-si-out"></output><input id="wz-si-size" type="range" min="6" max="60" step="0.5"></label>
+      <label class="field">English font <select id="wz-en-font"></select></label>
+      <label class="field">English size <output id="wz-en-out"></output><input id="wz-en-size" type="range" min="6" max="60" step="0.5"></label>
+      <p id="wz-font-warn" class="notice warn" hidden></p>
+      <p id="wz-style-msg" class="notice" hidden></p>
+      <div class="actions"><button id="wz-finish" class="primary small" type="button">Finish setup</button></div>
+    </section>
+  </main>
+
+  <!-- ================================ main screen ================================= -->
+  <main id="view-main" hidden>
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"><i></i><i></i></div>
+        <div>
+          <h1>Singlish Caption Studio</h1>
+          <p class="muted">Sinhala + English captions for CapCut</p>
+        </div>
+      </div>
+      <button id="open-settings" class="icon-btn" type="button">Settings</button>
+    </header>
+
+    <section class="card" aria-labelledby="h-project">
+      <h2 id="h-project">Project</h2>
+      <div id="project-list" class="list" role="listbox" aria-label="CapCut projects" tabindex="0"></div>
+      <p id="project-empty" class="muted" hidden>No CapCut projects found. Create a project in CapCut with your video first.</p>
+    </section>
+
+    <section id="details" class="card" hidden aria-live="polite">
+      <h2>Clips</h2>
+      <div class="row"><span id="video-name" class="strong"></span><span id="video-dur" class="muted"></span></div>
+      <div id="chips" class="chips"></div>
+      <div class="clip-tools">
+        <span id="clip-sum" class="muted"></span>
+        <span class="clip-pick"><button id="clips-all" class="link-btn" type="button">All</button><button id="clips-none" class="link-btn" type="button">None</button></span>
+      </div>
+      <ul id="clips" class="clips" aria-label="Clips to caption"></ul>
+      <p id="warn" class="notice warn" hidden></p>
+      <p id="problem" class="notice warn" hidden></p>
+      <div id="restore-row" class="actions" hidden>
+        <button id="restore" class="link-btn" type="button">Restore the backup from before the captions</button>
+      </div>
+      <p id="restore-msg" class="notice" hidden></p>
+    </section>
+
+    <section class="card consent">
+      <label class="check">
+        <input id="consent" type="checkbox">
+        <span>Send this video's <b>audio</b> to ElevenLabs to transcribe it. It uses credits on your ElevenLabs plan. Nothing else leaves your computer.</span>
+      </label>
+    </section>
+
+    <button id="go" class="primary" disabled>Choose a project</button>
+    <p id="hint" class="muted center" role="status"></p>
+
+    <ol id="steps" class="steps" hidden aria-label="Progress">
+      <li data-step="transcribe"><span class="dot"></span><span class="lbl">Transcribing speech</span></li>
+      <li data-step="captions"><span class="dot"></span><span class="lbl">Building captions</span></li>
+      <li data-step="write"><span class="dot"></span><span class="lbl">Writing to your project</span></li>
+    </ol>
+
+    <section id="result" class="card" hidden aria-live="polite">
+      <h2 id="result-title">Captions</h2>
+      <p id="run-usage" class="muted small-text" hidden></p>
+      <ul id="lines" class="lines"></ul>
+      <p id="result-note" class="notice ok" hidden></p>
+    </section>
+  </main>
+
+  <!-- ================================== settings ================================== -->
+  <div id="scrim" class="scrim" hidden></div>
+  <aside id="settings" class="drawer" tabindex="-1" hidden aria-labelledby="h-settings" role="dialog" aria-modal="true">
+    <div class="drawer-head">
+      <h2 id="h-settings">Settings</h2>
+      <button id="close-settings" class="icon-btn" type="button">Close</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="style" aria-selected="true">Style</button>
+      <button class="tab" role="tab" data-tab="words" aria-selected="false">Words</button>
+      <button class="tab" role="tab" data-tab="account" aria-selected="false">Account</button>
+      <button class="tab" role="tab" data-tab="usage" aria-selected="false">Usage</button>
+      <button class="tab" role="tab" data-tab="about" aria-selected="false">About</button>
+    </div>
+
+    <div id="tab-style" class="tabpane">
+      <div class="preview" aria-label="Preview">
+        <div><span id="pv-si">අද අපි </span><span id="pv-en">new phone</span><span id="pv-si2"> එකක් බලමු</span></div>
+        <small class="muted">Approximate preview</small>
+      </div>
+      <fieldset>
+        <legend>Sinhala</legend>
+        <label>Font <select id="si-font"></select></label>
+        <label>Size <output id="si-size-out"></output><input id="si-size" type="range" min="6" max="60" step="0.5"></label>
+      </fieldset>
+      <fieldset>
+        <legend>English</legend>
+        <label>Font <select id="en-font"></select></label>
+        <label>Size <output id="en-size-out"></output><input id="en-size" type="range" min="6" max="60" step="0.5"></label>
+        <label class="check inline"><input id="en-bold" type="checkbox"><span>Bold</span></label>
+      </fieldset>
+      <fieldset>
+        <legend>Layout</legend>
+        <label>Text color <input id="color" type="color"></label>
+        <label>Height on screen <output id="y-out"></output><input id="pos-y" type="range" min="-0.9" max="0.9" step="0.05"></label>
+      </fieldset>
+      <p id="font-warn" class="notice warn" hidden></p>
+      <p id="settings-msg" class="notice" hidden></p>
+      <button id="save-settings" class="primary">Save style</button>
+    </div>
+
+    <div id="tab-words" class="tabpane" hidden>
+      <p class="muted">ElevenLabs often writes English words in Sinhala letters. Teach it how you want them spelled.</p>
+      <fieldset>
+        <legend>English words</legend>
+        <p class="muted small-text">Left: how it appears in Sinhala letters. Right: the English you want.</p>
+        <div id="gl-english" class="gl-rows"></div>
+        <button id="gl-add-english" class="secondary" type="button">Add a word</button>
+      </fieldset>
+      <fieldset>
+        <legend>Spelling fixes</legend>
+        <p class="muted small-text">Replace a Sinhala spelling with the one you prefer.</p>
+        <div id="gl-spelling" class="gl-rows"></div>
+        <button id="gl-add-spelling" class="secondary" type="button">Add a fix</button>
+      </fieldset>
+      <p id="gl-msg" class="notice" hidden></p>
+      <button id="gl-save" class="primary">Save words</button>
+    </div>
+
+    <div id="tab-account" class="tabpane" hidden>
+      <fieldset>
+        <legend>API key</legend>
+        <p id="acct-status" class="notice"></p>
+        <label class="field">New key
+          <input id="acct-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a key to replace the saved one">
+        </label>
+        <p id="acct-msg" class="notice" hidden></p>
+        <div class="actions">
+          <button id="acct-save" class="primary small" type="button">Save and test</button>
+          <button id="acct-remove" class="secondary" type="button">Remove key</button>
+        </div>
+        <p class="muted small-text">Use a key limited to “Speech to Text” with a credit limit. It is stored in Windows Credential Manager.</p>
+      </fieldset>
+    </div>
+
+    <div id="tab-usage" class="tabpane" hidden>
+      <p class="muted">ElevenLabs charges for speech-to-text by the amount of audio, not by tokens. This is what the app has sent so far. Answers read from the local cache cost nothing.</p>
+      <div id="usage-totals" class="stats"></div>
+      <label class="field">Your price per minute of audio (optional)
+        <input id="usage-price" type="text" inputmode="decimal" autocomplete="off" placeholder="for example 0.40">
+      </label>
+      <p class="muted small-text">Only used to show a rough cost estimate here. Your ElevenLabs plan has the real rate.</p>
+      <p id="usage-msg" class="notice" hidden></p>
+      <div class="actions">
+        <button id="usage-save-price" class="secondary" type="button">Save price</button>
+        <button id="usage-clear" class="secondary" type="button">Clear usage log</button>
+      </div>
+      <div id="usage-projects"></div>
+    </div>
+
+    <div id="tab-about" class="tabpane about" hidden>
+      <p><span class="about-name">Singlish Caption Studio</span> <span id="about-version" class="muted"></span></p>
+      <p>Captions for videos where Sinhala and English are mixed in the same sentence. It writes them straight into your CapCut project and gives each language its own font and size.</p>
+      <h3>Made by</h3>
+      <p>Wasath. I make videos in Sinhala with a lot of English words in them, and I got tired of fixing captions by hand. This is the tool I wanted, shared in case it helps you too.</p>
+      <h3>Privacy</h3>
+      <p>The audio of the clips you pick is sent to ElevenLabs to be turned into text. Nothing else leaves your computer. Your key stays in Windows Credential Manager. There is no tracking and no account.</p>
+      <h3>License</h3>
+      <p>Free and open source under the MIT license.</p>
+      <p class="muted small-text">This is an independent project. It is not affiliated with or endorsed by CapCut, ByteDance or ElevenLabs.</p>
+      <div class="actions"><button id="about-coffee" class="primary small" type="button">Buy me a coffee</button></div>
+    </div>
+  </aside>
+
+  <script src="app.js"></script>
+</body>
+</html>

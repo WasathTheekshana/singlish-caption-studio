@@ -4,14 +4,12 @@
 use std::{f64::consts::PI, fs::File, path::Path};
 
 use symphonia::core::{
-    audio::SampleBuffer,
-    codecs::{DecoderOptions, CODEC_TYPE_NULL},
+    codecs::{audio::AudioDecoderOptions, CodecParameters},
     errors::Error as SymError,
-    formats::{FormatOptions, SeekMode, SeekTo},
+    formats::{probe::Hint, FormatOptions, SeekMode, SeekTo, TrackType},
     io::MediaSourceStream,
     meta::MetadataOptions,
-    probe::Hint,
-    units::Time,
+    units::{Time, Timestamp},
 };
 
 pub const OUT_RATE: u32 = 16_000;
@@ -145,10 +143,6 @@ fn catching<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
 
 const SEEK_FAILED: &str = "seek failed";
 
-fn time_secs(t: Time) -> f64 {
-    t.seconds as f64 + t.frac
-}
-
 fn decode(path: &Path, range: Option<(f64, f64)>, allow_seek: bool) -> Result<Vec<u8>, String> {
     let file = File::open(path).map_err(|_| "Could not open the video file.")?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
@@ -156,78 +150,79 @@ fn decode(path: &Path, range: Option<(f64, f64)>, allow_seek: bool) -> Result<Ve
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
         hint.with_extension(ext);
     }
-    let probed = symphonia::default::get_probe()
-        .format(
+    let mut format = symphonia::default::get_probe()
+        .probe(
             &hint,
             mss,
-            &FormatOptions::default(),
-            &MetadataOptions::default(),
+            FormatOptions::default(),
+            MetadataOptions::default(),
         )
         .map_err(|_| "This video format is not supported.")?;
-    let mut format = probed.format;
     let track = format
-        .tracks()
-        .iter()
-        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL && t.codec_params.sample_rate.is_some())
+        .first_track(TrackType::Audio)
         .ok_or("This video has no audio track.")?;
-    let (track_id, params) = (track.id, track.codec_params.clone());
+    let (track_id, time_base) = (track.id, track.time_base);
+    let Some(CodecParameters::Audio(params)) = track.codec_params.clone() else {
+        return Err("This video has no audio track.".into());
+    };
     let in_rate = params.sample_rate.ok_or("This video has no audio track.")?;
+    // Keep every decoded frame (no gapless trimming), as the 0.5 decoders did by default.
+    #[allow(clippy::field_reassign_with_default)]
+    let opts = {
+        let mut o = AudioDecoderOptions::default();
+        o.gapless = false;
+        o
+    };
     let mut decoder = symphonia::default::get_codecs()
-        .make(&params, &DecoderOptions::default())
+        .make_audio_decoder(&params, &opts)
         .map_err(|_| "This audio format is not supported.")?;
 
     let (r_start, r_end) = range.unwrap_or((0.0, f64::INFINITY));
     if allow_seek && r_start > PREROLL_S + 0.5 {
-        let target = Time::from(r_start - PREROLL_S);
-        if format
-            .seek(
-                SeekMode::Accurate,
-                SeekTo::Time {
-                    time: target,
-                    track_id: Some(track_id),
-                },
-            )
-            .is_err()
-        {
+        let target = Time::try_from_secs_f64(r_start - PREROLL_S).ok_or(SEEK_FAILED)?;
+        let seek = SeekTo::Time {
+            time: target,
+            track_id: Some(track_id),
+        };
+        if format.seek(SeekMode::Accurate, seek).is_err() {
             return Err(SEEK_FAILED.into());
         }
         decoder.reset();
     }
-    let ts_to_secs = |ts: u64| match params.time_base {
-        Some(tb) => time_secs(tb.calc_time(ts)),
-        None => ts as f64 / f64::from(in_rate),
+    let ts_to_secs = |ts: Timestamp| match time_base.and_then(|tb| tb.calc_time(ts)) {
+        Some(t) => t.as_secs_f64(),
+        None => ts.get() as f64 / f64::from(in_rate),
     };
 
     let mut rs = (in_rate != OUT_RATE).then(|| Resampler::new(in_rate, OUT_RATE));
     let mut out: Vec<i16> = Vec::new();
-    let mut sample_buf: Option<SampleBuffer<f32>> = None;
+    let mut interleaved: Vec<f32> = Vec::new();
     let mut mono: Vec<f32> = Vec::new();
     let mut first_time: Option<f64> = None;
     let mut frames_seen = 0usize;
     loop {
         let packet = match format.next_packet() {
-            Ok(p) => p,
+            Ok(Some(p)) => p,
+            Ok(None) => break,
             Err(SymError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
             Err(SymError::ResetRequired) => break,
             Err(_) => return Err("The audio could not be read to the end.".into()),
         };
-        if packet.track_id() != track_id {
+        if packet.track_id != track_id {
             continue;
         }
-        let t0 = *first_time.get_or_insert_with(|| ts_to_secs(packet.ts()));
+        let t0 = *first_time.get_or_insert_with(|| ts_to_secs(packet.pts));
         let decoded = match decoder.decode(&packet) {
             Ok(d) => d,
             Err(SymError::DecodeError(_)) => continue, // skip a damaged packet
             Err(_) => return Err("The audio could not be decoded.".into()),
         };
-        let spec = *decoded.spec();
-        let channels = spec.channels.count().max(1);
-        let sb = sample_buf
-            .get_or_insert_with(|| SampleBuffer::<f32>::new(decoded.capacity() as u64, spec));
-        sb.copy_interleaved_ref(decoded);
+        let channels = decoded.spec().channels().count().max(1);
+        interleaved.clear();
+        decoded.copy_to_vec_interleaved::<f32>(&mut interleaved);
         mono.clear();
         mono.extend(
-            sb.samples()
+            interleaved
                 .chunks(channels)
                 .map(|f| f.iter().sum::<f32>() / channels as f32),
         );

@@ -3,11 +3,11 @@ name: Release
 # Releases follow the commit messages, see docs/releasing.md.
 #
 # On every push to main, release-please keeps a release pull request up to date. Merging that
-# pull request creates the tag and the GitHub release, and the build job then attaches the
-# installer.
+# pull request creates the tag and the GitHub release, and the build job then builds a signed
+# installer and attaches it, together with the update manifest that installed apps read.
 #
 # "Run workflow" (manual) builds the installer and keeps it as a build artifact. If you also give it
-# the tag of an existing release, it builds that tag and attaches the installer to that release.
+# the tag of an existing release, it builds that tag and attaches the files to that release.
 # That is how to repair a release whose build failed.
 on:
   push:
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag of an existing release to attach the installer to, like singlish-caption-studio-v0.1.0. Leave empty to only build an artifact."
+        description: "Tag of an existing release to attach the files to, like singlish-caption-studio-v0.2.0. Leave empty to only build an artifact."
         required: false
         default: ""
 
@@ -58,6 +58,7 @@ jobs:
           persist-credentials: false
 
       - name: Check that the version files agree with the tag
+        id: version
         shell: pwsh
         env:
           TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
@@ -80,6 +81,18 @@ jobs:
             }
           }
           Write-Host "Building version $cargo"
+          "version=$cargo" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      # Fail early with a clear message, before the long build, if the signing key is missing.
+      - name: Check that the signing key is configured
+        shell: pwsh
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if (-not $env:KEY) {
+            Write-Error "The TAURI_SIGNING_PRIVATE_KEY secret is not set, so the installer cannot be signed. See docs/releasing.md."
+            exit 1
+          }
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
@@ -93,34 +106,71 @@ jobs:
       - name: Test
         run: cargo test
 
+      # The signing key is given to this one step only. It is what makes installed apps trust the update.
       - name: Build the installer
-        run: cargo tauri build --bundles nsis
-
-      - name: Write checksums
         shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          $dir = "target/release/bundle/nsis"
-          Get-ChildItem $dir -Filter "*-setup.exe" | ForEach-Object {
-            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
-            "$hash  $($_.Name)" | Out-File -FilePath "$dir/SHA256SUMS.txt" -Append -Encoding ascii
+          # A secret pasted into GitHub often gains a trailing line break, and the signer rejects that.
+          foreach ($name in "TAURI_SIGNING_PRIVATE_KEY", "TAURI_SIGNING_PRIVATE_KEY_PASSWORD") {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            if ($value) { [Environment]::SetEnvironmentVariable($name, $value.TrimEnd("`r", "`n")) }
           }
-          Get-Content "$dir/SHA256SUMS.txt"
+          cargo tauri build --bundles nsis
+
+      # GitHub renames files with spaces, so the installer gets a plain name to keep its address predictable.
+      - name: Prepare the release files
+        id: files
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $src = "target/release/bundle/nsis"
+          $out = "release-files"
+          New-Item -ItemType Directory -Path $out | Out-Null
+          $installer = Get-ChildItem $src -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $installer -or -not (Test-Path "$($installer.FullName).sig")) {
+            Write-Error "The build did not produce a signed installer."
+            exit 1
+          }
+          $name = "Singlish-Caption-Studio_$($env:VERSION)_x64-setup.exe"
+          Copy-Item $installer.FullName "$out/$name"
+          Copy-Item "$($installer.FullName).sig" "$out/$name.sig"
+          $hash = (Get-FileHash "$out/$name" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $name" | Out-File -FilePath "$out/SHA256SUMS.txt" -Encoding ascii
+          Get-Content "$out/SHA256SUMS.txt"
+          "name=$name" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Attest the build
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: target/release/bundle/nsis/*-setup.exe
+          subject-path: release-files/*-setup.exe
 
-      - name: Keep the installer as a build artifact
+      - name: Keep the files as a build artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installer
-          path: |
-            target/release/bundle/nsis/*-setup.exe
-            target/release/bundle/nsis/SHA256SUMS.txt
+          path: release-files/*
           if-no-files-found: error
 
-      - name: Attach the installer to the release
+      - name: Write the update manifest
+        if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ASSET: ${{ steps.files.outputs.name }}
+        run: |
+          gh release view $env:TAG --json body --jq .body | Out-File -FilePath notes.md -Encoding utf8
+          python tools/make_latest_json.py --version $env:VERSION --repo $env:GH_REPO --tag $env:TAG --asset $env:ASSET --sig-file "release-files/$($env:ASSET).sig" --notes-file notes.md --out release-files/latest.json
+          Get-Content release-files/latest.json
+
+      # The manifest goes last, so an app never reads it before the installer it points to exists.
+      - name: Attach the files to the release
         if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
         shell: pwsh
         env:
@@ -128,6 +178,21 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
         run: |
-          $dir = "target/release/bundle/nsis"
-          $files = @(Get-ChildItem $dir -Filter "*-setup.exe") + @(Get-Item "$dir/SHA256SUMS.txt") | ForEach-Object { $_.FullName }
+          $files = Get-ChildItem release-files -File | Where-Object { $_.Name -ne "latest.json" } | ForEach-Object { $_.FullName }
           gh release upload $env:TAG @files --clobber
+          gh release upload $env:TAG release-files/latest.json --clobber
+
+      # GitHub can change a file name on upload. Make sure the addresses the app will use really work.
+      - name: Check that the published files can be downloaded
+        if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+        shell: pwsh
+        env:
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+          ASSET: ${{ steps.files.outputs.name }}
+        run: |
+          $base = "https://github.com/$($env:GH_REPO)/releases/download/$($env:TAG)"
+          foreach ($file in @($env:ASSET, "$($env:ASSET).sig", "SHA256SUMS.txt", "latest.json")) {
+            $response = Invoke-WebRequest -Method Head -Uri "$base/$file" -MaximumRedirection 5
+            Write-Host "$file : HTTP $($response.StatusCode)"
+          }

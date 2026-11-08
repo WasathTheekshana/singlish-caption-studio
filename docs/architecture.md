@@ -44,6 +44,7 @@ record usage                   usage.rs
 | `src/eleven.rs` | The only network code. One address, timeouts, size limits. |
 | `src/secrets.rs` | The API key in Windows Credential Manager. |
 | `src/store.rs` | Settings, glossary and cache locations. Atomic writes and size-limited reads. |
+| `src/srt.rs` | Writes the captions as a `.srt` file in Documents, with a safe file name built from the project title. |
 | `src/usage.rs` | The local usage log. |
 | `src/updater.rs` | Checks GitHub for a newer release and installs it. A thin, tested wrapper around the Tauri updater plugin, which the page cannot call directly. |
 | `src/fonts.rs` | Installed fonts, read from the registry. |

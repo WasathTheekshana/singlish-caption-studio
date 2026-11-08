@@ -24,6 +24,7 @@ fn main() {
         "install_update",
         "get_update_settings",
         "set_auto_update_check",
+        "reveal_srt",
         "start_caption",
     ]);
     if let Err(e) = tauri_build::try_build(tauri_build::Attributes::new().app_manifest(manifest)) {

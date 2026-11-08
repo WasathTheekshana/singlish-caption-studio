@@ -112,6 +112,7 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 2px 0 0; accent-colo
 
 /* result */
 #result { margin-top: 22px; }
+.srt .notice { margin-top: 14px; }
 .lines { list-style: none; margin: 0; padding: 0; }
 .lines li { display: flex; gap: 16px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line); }
 .lines time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; flex: none; width: 34px; }

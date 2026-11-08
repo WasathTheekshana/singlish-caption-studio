@@ -260,6 +260,7 @@ function renderDetails() {
   note("warn", (i.warnings || []).join(" "), "warn");
   note("problem", i.error || (i.problems && i.problems[0]) || "", "warn");
   show("restore-row", !!i.has_captions && !i.error);
+  show("srt-detail", !!i.srt_file && !i.error && $("srt-row").hidden);
 }
 function updateSummary() {
   const n = state.sel.size, total = ((state.info && state.info.clips) || []).length;
@@ -313,7 +314,7 @@ $("restore").addEventListener("click", async () => {
 
 // ------------------------------------------------------------------ run
 const STEPS = ["transcribe", "captions", "write"];
-function resetProgress() { show("steps", false); show("result", false); document.querySelectorAll("#steps li").forEach((li) => (li.className = "")); }
+function resetProgress() { show("steps", false); show("result", false); show("srt-row", false); document.querySelectorAll("#steps li").forEach((li) => (li.className = "")); }
 function setStep(name, status, message) {
   const idx = STEPS.indexOf(name);
   document.querySelectorAll("#steps li").forEach((li, n) => {
@@ -348,6 +349,21 @@ function finish(ok, text) {
   show("result", true);
   refreshInfo();
 }
+function showSrt(ev) {
+  note("srt-text", ev.saved
+    ? `Also saved as ${ev.file} in your Documents folder (Singlish Caption Studio, then Subtitles). Upload it with your video on YouTube or Facebook.`
+    : `The caption file could not be saved. ${ev.message || ""}`, ev.saved ? "" : "warn");
+  $("srt-show").hidden = !ev.saved;
+  show("srt-row", true);
+  show("result", true);
+}
+async function revealSrt() {
+  if (!state.selected) return;
+  try { await invoke("reveal_srt", { folder: state.selected }); }
+  catch (e) { note("srt-text", msg(e), "warn"); show("srt-row", true); }
+}
+$("srt-show").addEventListener("click", revealSrt);
+$("srt-show-detail").addEventListener("click", revealSrt);
 const FRIENDLY = [
   [/^consent_required/, "Tick the box to allow sending the audio to ElevenLabs, then try again."],
   [/No ElevenLabs key/, "No ElevenLabs key is saved. Add it in Settings, then Account."],
@@ -360,6 +376,7 @@ listen("caption-event", (e) => {
   if (ev.event === "stage") setStep(ev.name, "active", ev.message);
   else if (ev.event === "usage") showRunUsage(ev);
   else if (ev.event === "captions") renderLines(ev.lines);
+  else if (ev.event === "srt") showSrt(ev);
   else if (ev.event === "done") finish(true, `Done. ${ev.segments} captions added.${ev.skipped ? ` ${ev.skipped} clip(s) had no sound and were skipped.` : ""} Open CapCut, then open this project.`);
   else if (ev.event === "error") finish(false, friendly(ev.message));
 });

@@ -17,7 +17,7 @@ use sha2::{Digest, Sha256};
 use crate::{
     audio,
     draft::{self, Clip},
-    eleven, fonts, secrets, store,
+    eleven, fonts, secrets, srt, store,
     text::{group_tokens, Glossary, Grouping, Token},
     usage::{self, ClipUsage, RequestUsage},
 };
@@ -41,6 +41,9 @@ pub struct Fetched {
 /// Gets the words of one source-file range.
 pub type Transcriber<'a> = &'a dyn Fn(&Clip, f64, f64) -> Result<Fetched, String>;
 
+/// Saves the captions as an .srt file and returns the file's name.
+pub type SrtSaver<'a> = &'a dyn Fn(&[Token]) -> Result<String, String>;
+
 pub struct Deps<'a> {
     pub transcribe: Transcriber<'a>,
     pub style: draft::Style,
@@ -49,6 +52,8 @@ pub struct Deps<'a> {
     pub check_capcut: bool,
     /// Where to report usage. Tests leave this empty or collect the runs.
     pub record: Option<&'a dyn Fn(usage::Run)>,
+    /// Saves the captions as an .srt file and returns its name. Tests leave this empty.
+    pub save_srt: Option<SrtSaver<'a>>,
 }
 
 pub fn resolve_style(
@@ -245,7 +250,13 @@ fn now_secs() -> u64 {
 
 /// Runs the whole job, reporting progress through `emit`. Always ends with `done` or `error`.
 /// `selected` holds the segment ids to caption; `None` means the sensible default.
-pub fn run(project: &Path, allow_cloud: bool, selected: Option<&[String]>, emit: &dyn Fn(Value)) {
+pub fn run(
+    project: &Path,
+    title: &str,
+    allow_cloud: bool,
+    selected: Option<&[String]>,
+    emit: &dyn Fn(Value),
+) {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let installed = fonts::installed();
         let cfg = store::load_config(&installed);
@@ -255,12 +266,14 @@ pub fn run(project: &Path, allow_cloud: bool, selected: Option<&[String]>, emit:
         let save = |run: usage::Run| {
             let _ = usage::record(run);
         };
+        let save_srt = |captions: &[Token]| srt::save(title, captions);
         let deps = Deps {
             transcribe: &fetch,
             style,
             glossary: Glossary::new(&store::load_glossary()),
             check_capcut: true,
             record: Some(&save),
+            save_srt: Some(&save_srt),
         };
         run_with(project, selected, emit, &deps)
     }))
@@ -408,6 +421,14 @@ pub fn run_with(
         .map(|c| json!({"start": c.start, "end": c.end, "text": c.text}))
         .collect();
     emit(json!({"event": "captions", "lines": lines}));
+
+    // Saved before the project is touched, so a failed write never wastes paid transcription.
+    if let Some(save) = deps.save_srt {
+        match save(&captions) {
+            Ok(file) => emit(json!({"event": "srt", "saved": true, "file": file})),
+            Err(message) => emit(json!({"event": "srt", "saved": false, "message": message})),
+        }
+    }
 
     stage(emit, "write", "Writing to your project");
     let n = draft::write_captions_with(project, &captions, &deps.style, 0.0, deps.check_capcut)?;
@@ -643,8 +664,69 @@ mod tests {
             glossary: Glossary::new(&Default::default()),
             check_capcut: false,
             record: None,
+            save_srt: None,
         };
         run_with(&f.project, selected, &|_| {}, &deps)
+    }
+
+    #[test]
+    fn the_srt_is_saved_from_the_same_captions_before_the_project_is_written() {
+        let f = Fixture::new("srt");
+        let calls = Cell::new(0);
+        let tx = fake(&calls);
+        let saved = RefCell::new(Vec::new());
+        let order = RefCell::new(Vec::new());
+        let save = |caps: &[Token]| {
+            saved.borrow_mut().extend(caps.iter().cloned());
+            Ok("demo.si_LK.srt".to_string())
+        };
+        let deps = Deps {
+            transcribe: &tx,
+            style: test_style(),
+            glossary: Glossary::new(&Default::default()),
+            check_capcut: false,
+            record: None,
+            save_srt: Some(&save),
+        };
+        let emit = |ev: Value| {
+            order
+                .borrow_mut()
+                .push(ev["event"].as_str().unwrap_or("").to_string())
+        };
+        let (n, _) = run_with(&f.project, None, &emit, &deps).unwrap();
+        let saved = saved.into_inner();
+        assert_eq!(
+            saved.len(),
+            n,
+            "the file and the project hold the same captions"
+        );
+        let order = order.into_inner();
+        let pos = |name: &str| order.iter().position(|e| e == name);
+        assert!(pos("srt").is_some(), "{order:?}");
+        assert!(pos("captions") < pos("srt"), "{order:?}");
+    }
+
+    #[test]
+    fn a_failed_srt_save_does_not_stop_the_captions() {
+        let f = Fixture::new("srt-fail");
+        let calls = Cell::new(0);
+        let tx = fake(&calls);
+        let save = |_: &[Token]| Err("Could not save the caption file.".to_string());
+        let deps = Deps {
+            transcribe: &tx,
+            style: test_style(),
+            glossary: Glossary::new(&Default::default()),
+            check_capcut: false,
+            record: None,
+            save_srt: Some(&save),
+        };
+        let events = RefCell::new(Vec::new());
+        let emit = |ev: Value| events.borrow_mut().push(ev);
+        let (n, _) = run_with(&f.project, None, &emit, &deps).unwrap();
+        assert!(n > 0 && f.captions_in_draft().len() == n);
+        let events = events.into_inner();
+        let srt = events.iter().find(|e| e["event"] == "srt").unwrap();
+        assert_eq!(srt["saved"], false);
     }
 
     #[test]
@@ -792,6 +874,7 @@ mod tests {
             glossary: Glossary::new(&Default::default()),
             check_capcut: false,
             record: Some(&rec),
+            save_srt: None,
         };
         let out = run_with(&f.project, selected, &|_| {}, &deps);
         (out, runs.into_inner())

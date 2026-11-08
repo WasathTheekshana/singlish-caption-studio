@@ -28,6 +28,7 @@
     "allow-install-update",
     "allow-get-update-settings",
     "allow-set-auto-update-check",
+    "allow-reveal-srt",
     "allow-start-caption"
   ]
 }

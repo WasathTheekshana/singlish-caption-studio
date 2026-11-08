@@ -37,6 +37,7 @@ The update is never installed on its own. If a newer version is found, the app s
 | Glossary | `%APPDATA%\Singlish Caption Studio\glossary.json` | |
 | Usage log | `%APPDATA%\Singlish Caption Studio\usage.json` | Seconds, request counts, word counts and clip names. No audio and no caption text. The newest 200 runs are kept. |
 | Transcript cache | `%LOCALAPPDATA%\Singlish Caption Studio Data\cache` | The words and timings ElevenLabs returned, so the same audio is never paid for twice. |
+| Caption files (`.srt`) | `Documents\Singlish Caption Studio\Subtitles` | The captions of each project as text, named after the project, so you can upload them with your video. Nothing sends them anywhere. |
 | Project backups | Inside your CapCut project folder, next to `draft_content.json` | Named `draft_content.json.bak-<number>`. |
 | Browser storage | The app's own web view | Remembers whether you ticked the consent box. |
 
@@ -47,6 +48,7 @@ Your video files are never copied, moved or uploaded as files. Only decoded audi
 - Remove the key in the app under Settings, then Account. You can also delete the "Singlish Caption Studio" entry in Windows Credential Manager.
 - Clear the usage log in Settings, then Usage.
 - Delete the two folders in the table above to remove settings, glossary and cache.
+- Delete the `Singlish Caption Studio` folder in your Documents to remove the caption files.
 - Delete the `.bak` files in a project folder if you no longer need the backups.
 - Uninstalling the app removes the program but leaves your settings, so delete the folders as well if you want everything gone.
 

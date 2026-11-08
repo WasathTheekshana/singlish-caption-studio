@@ -36,6 +36,7 @@ It is a small Windows app. You pick a CapCut project, press one button, and the 
 - Works with projects that have many clips, trims and speed changes.
 - Turns English words that came back in Sinhala letters into English, using a list you can edit.
 - Applies your own Sinhala font and English font, sizes, color and position.
+- Saves the same captions as an `.srt` file, so you can upload them with your video on YouTube or Facebook.
 - Shows how much audio each run used, per project and per clip.
 - Backs up the project file before every change, and can restore it.
 
@@ -74,6 +75,15 @@ A short setup asks for three things.
 5. Open the project in CapCut. The captions are on a track called "Auto captions (SI+EN)".
 
 Running it again replaces that track, so you can tweak the glossary or the style and try again.
+
+### The caption file for uploads
+
+Every run also saves the captions as a SubRip file in `Documents\Singlish Caption Studio\Subtitles`, named after the project, for example `My video.si_LK.srt`. The window has a **Show the .srt file** button that opens the folder with the file selected. Upload it next to your video:
+
+- **YouTube:** in YouTube Studio, open the video, choose Subtitles, then Upload file, then With timing.
+- **Facebook:** in Edit video, open Captions and choose Upload SRT file. Facebook needs the language code in the file name, which is why the name ends in `.si_LK.srt`.
+
+The times follow your CapCut timeline, so export the whole timeline from CapCut for them to line up. TikTok's normal upload has no place for a caption file, as far as I can tell, so there the captions need to be part of the video.
 
 ### The glossary
 

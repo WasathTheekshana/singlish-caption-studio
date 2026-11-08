@@ -10,6 +10,7 @@ mod eleven;
 mod fonts;
 mod pipeline;
 mod secrets;
+mod srt;
 mod store;
 mod text;
 mod updater;
@@ -98,15 +99,21 @@ fn read_projects() -> Res<Vec<ProjectEntry>> {
     Ok(out)
 }
 
-/// Resolve a UI-supplied folder name to a real project path, only if CapCut lists it.
-fn project_path(folder: &str) -> Res<PathBuf> {
+/// Resolve a UI-supplied folder name to a real project path and its title, only if CapCut lists it.
+fn project_entry(folder: &str) -> Res<(PathBuf, String)> {
     if !project_name_ok(folder) {
         return Err("Invalid project name.".into());
     }
-    if !read_projects()?.iter().any(|p| p.folder == folder) {
-        return Err("That project is not in CapCut's list.".into());
-    }
-    Ok(store::drafts_root()?.join(folder))
+    let title = read_projects()?
+        .into_iter()
+        .find(|p| p.folder == folder)
+        .map(|p| p.title)
+        .ok_or("That project is not in CapCut's list.")?;
+    Ok((store::drafts_root()?.join(folder), title))
+}
+
+fn project_path(folder: &str) -> Res<PathBuf> {
+    project_entry(folder).map(|(path, _)| path)
 }
 
 fn clean(s: &str, max: usize) -> String {
@@ -121,7 +128,9 @@ async fn list_projects() -> Res<Vec<ProjectEntry>> {
 #[tauri::command]
 async fn inspect_project(folder: String) -> Res<Value> {
     blocking(move || {
-        let info = draft::inspect(&project_path(&folder)?)?;
+        let (path, title) = project_entry(&folder)?;
+        let info = draft::inspect(&path)?;
+        let srt_file = srt::path_for(&title).map(|p| p.is_file()).unwrap_or(false);
         // Only what the UI needs: names, times and ids. No absolute paths leave the backend.
         let clips: Vec<Value> = info
             .clips
@@ -144,6 +153,7 @@ async fn inspect_project(folder: String) -> Res<Value> {
             "capcut_running": info.capcut_running,
             "duration_s": info.duration_s,
             "has_captions": info.has_captions,
+            "srt_file": srt_file,
             "clips": clips,
             "problems": info.problems.iter().take(5).map(|p| clean(p, 300)).collect::<Vec<_>>(),
             "warnings": info.warnings.iter().take(5).map(|p| clean(p, 300)).collect::<Vec<_>>(),
@@ -331,6 +341,33 @@ async fn open_link(which: String) -> Res<()> {
     .await
 }
 
+/// Show the project's caption file in Explorer. The path is built here from the project's title,
+/// so the page cannot point Explorer at anything else.
+#[tauri::command]
+async fn reveal_srt(folder: String) -> Res<()> {
+    blocking(move || {
+        let (_, title) = project_entry(&folder)?;
+        let file = srt::path_for(&title)?;
+        if !file.is_file() {
+            return Err("There is no caption file for this project yet.".into());
+        }
+        let sys = std::env::var_os("SYSTEMROOT")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
+        let mut cmd = std::process::Command::new(sys.join("explorer.exe"));
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            // File names cannot contain quotes, so quoting the whole path is safe.
+            cmd.raw_arg(format!("/select,\"{}\"", file.display()));
+        }
+        cmd.spawn()
+            .map(|_| ())
+            .map_err(|_| "Could not open the folder.".to_string())
+    })
+    .await
+}
+
 #[tauri::command]
 async fn check_update(app: AppHandle, pending: tauri::State<'_, updater::Pending>) -> Res<Value> {
     updater::check(&app, &pending).await
@@ -378,7 +415,7 @@ async fn start_caption(
     if clips.len() > MAX_CLIPS || !clips.iter().all(|id| segment_id_ok(id)) {
         return Err("Invalid clip selection.".into());
     }
-    let path = blocking(move || project_path(&folder)).await?;
+    let (path, title) = blocking(move || project_entry(&folder)).await?;
     if JOB_RUNNING
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .is_err()
@@ -387,7 +424,7 @@ async fn start_caption(
     }
     thread::spawn(move || {
         let _guard = JobGuard;
-        pipeline::run(&path, allow_cloud, Some(&clips), &|ev| {
+        pipeline::run(&path, &title, allow_cloud, Some(&clips), &|ev| {
             let _ = app.emit("caption-event", ev);
         });
     });
@@ -443,6 +480,7 @@ fn main() {
             install_update,
             get_update_settings,
             set_auto_update_check,
+            reveal_srt,
             start_caption
         ])
         .run(tauri::generate_context!());

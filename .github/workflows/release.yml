@@ -4,11 +4,20 @@ name: Release
 #
 # On every push to main, release-please keeps a release pull request up to date. Merging that
 # pull request creates the tag and the GitHub release, and the build job then attaches the
-# installer. "Run workflow" (manual) only builds the installer and keeps it as a build artifact.
+# installer.
+#
+# "Run workflow" (manual) builds the installer and keeps it as a build artifact. If you also give it
+# the tag of an existing release, it builds that tag and attaches the installer to that release.
+# That is how to repair a release whose build failed.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag of an existing release to attach the installer to, like singlish-caption-studio-v0.1.0. Leave empty to only build an artifact."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -45,13 +54,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.release-please.outputs.tag_name || github.sha }}
+          ref: ${{ needs.release-please.outputs.tag_name || inputs.tag || github.sha }}
           persist-credentials: false
 
       - name: Check that the version files agree with the tag
         shell: pwsh
         env:
-          TAG: ${{ needs.release-please.outputs.tag_name }}
+          TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
         run: |
           $cargo = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
           $tauri = (Get-Content tauri.conf.json -Raw | ConvertFrom-Json).version
@@ -112,12 +121,12 @@ jobs:
           if-no-files-found: error
 
       - name: Attach the installer to the release
-        if: needs.release-please.outputs.release_created == 'true'
+        if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
+          TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
         run: |
           $dir = "target/release/bundle/nsis"
           $files = @(Get-ChildItem $dir -Filter "*-setup.exe") + @(Get-Item "$dir/SHA256SUMS.txt") | ForEach-Object { $_.FullName }

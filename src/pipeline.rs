@@ -473,6 +473,16 @@ mod tests {
         let _ = (fs::remove_file(a), fs::remove_file(b));
     }
 
+    /// The cache key must not change when the hashing library is upgraded, or every saved
+    /// transcript would quietly stop being found. SHA-256 of "abc" is a published test value.
+    #[test]
+    fn the_cache_key_is_the_start_of_the_standard_sha256() {
+        let f = std::env::temp_dir().join(format!("scs-sha-abc-{}.bin", std::process::id()));
+        fs::write(&f, b"abc").unwrap();
+        assert_eq!(file_key(&f).unwrap(), "ba7816bf8f01cfea414140de5dae2223");
+        let _ = fs::remove_file(f);
+    }
+
     #[test]
     fn different_ranges_of_one_file_are_cached_separately() {
         let a = cache_path("abc", 0.0, 4.3).unwrap();

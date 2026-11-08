@@ -77,7 +77,13 @@ gh secret set TAURI_SIGNING_PRIVATE_KEY < updater.key
 gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD < updater.key.password
 ```
 
-Check that both exist with `gh secret list`. The workflow stops early with a clear message if the key is missing, and it trims stray line breaks before signing. The key reaches only the step that builds the installer.
+Check that both exist with `gh secret list`. The workflow stops early with a clear message if the key is missing, and it trims stray line breaks before signing.
+
+The key reaches only the step that signs the finished installer. Building is a separate step with no access to it, because compiling runs build scripts from hundreds of dependencies and one of them could otherwise read the key. For the same reason the Tauri CLI used by the release is pinned to an exact version in `release.yml`. To move to a newer one, change that version on purpose, run a build, and check the result.
+
+An optional extra layer: store the two secrets as **environment secrets** on a GitHub environment (for example `release`) that requires your approval, and add `environment: release` to the build job. Then even a bad change to the workflow cannot use the key until you approve the run.
+
+To build an installer yourself without the key, add `--config tauri.unsigned.conf.json` to `cargo tauri build`. It switches the update signing off. Such an installer works, but it is not an official release and cannot be offered as an update.
 
 ### The first release with updates
 

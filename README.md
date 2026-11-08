@@ -100,10 +100,10 @@ You need Windows, Rust 1.82 or newer, and the Visual Studio Build Tools with the
 ```
 cargo install tauri-cli --version "^2" --locked
 cargo test
-cargo tauri build --bundles nsis
+cargo tauri build --bundles nsis --config tauri.unsigned.conf.json
 ```
 
-The installer ends up in `target/release/bundle/nsis/`.
+The installer ends up in `target/release/bundle/nsis/`. The official releases are signed so installed apps will trust their updates, and only the project's release workflow has the key. The `--config` file turns that signing off, so you can build an installer without it.
 
 A few tests decode a real video. Point `SCS_TEST_VIDEO` at any short clip with speech to run them. Without it they skip.
 

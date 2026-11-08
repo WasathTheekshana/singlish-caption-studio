@@ -25,7 +25,7 @@ git clone https://github.com/YOUR-USERNAME/singlish-caption-studio.git
 cd singlish-caption-studio
 cargo test
 cargo install tauri-cli --version "^2" --locked
-cargo tauri build --bundles nsis
+cargo tauri build --bundles nsis --config tauri.unsigned.conf.json
 ```
 
 The interface is plain HTML, CSS and JavaScript in `ui/`. There is no bundler and no npm. Keep it that way: it keeps the supply chain small and the content security policy strict.

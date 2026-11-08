@@ -1,0 +1,10 @@
+#!/bin/sh
+# Rejects commit messages that are not Conventional Commits.
+# Turn it on once per clone:
+#   git config core.hooksPath tools/hooks
+here=$(dirname "$0")
+py=$(command -v python3 || command -v python) || {
+  echo "commit-msg hook: Python was not found, so the message was not checked." >&2
+  exit 0
+}
+exec "$py" "$here/../check_conventional.py" --commit-file "$1"

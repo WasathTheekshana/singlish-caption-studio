@@ -41,6 +41,9 @@ jobs:
       - name: Test
         run: cargo test
 
+      - name: Test the commit message checker
+        run: python -m unittest discover -s tools -p "test_*.py"
+
   audit:
     name: Dependency audit
     runs-on: windows-latest

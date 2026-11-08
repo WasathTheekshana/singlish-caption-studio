@@ -1,0 +1,25 @@
+name: PR title
+
+# The title of a squash-merged pull request becomes the commit message, and the commit
+# messages decide the next version (see docs/releasing.md). So the title has to be a
+# Conventional Commit.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    name: Conventional commit title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: python3 tools/check_conventional.py --title "$TITLE"

@@ -5,8 +5,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Titles like "build(deps): bump sha2 from 0.10.9 to 0.11.1" pass the PR title check.
+    commit-message:
+      prefix: "build(deps)"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "ci"

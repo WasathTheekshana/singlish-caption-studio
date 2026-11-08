@@ -1,0 +1,26 @@
+# build output
+/target/
+
+# created by the Tauri build every time it runs
+/gen/
+/permissions/
+
+# secrets and local settings, never commit these
+.env
+.env.*
+*.pem
+*.pfx
+
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# local test material
+/test-video/
+/work/
+/sandbox/
+/samples/
+*.bak-*

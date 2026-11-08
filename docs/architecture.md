@@ -39,7 +39,7 @@ record usage                   usage.rs
 | `src/main.rs` | The commands the interface can call. Validates every argument. |
 | `src/pipeline.rs` | The run described above. Takes the transcriber as an argument, so tests run the whole flow without a network. |
 | `src/draft.rs` | Reads and edits CapCut's `draft_content.json`: finds clips, builds caption segments, backups and restore. |
-| `src/text.rs` | Splits a caption into Sinhala and English runs, applies the glossary, groups words into lines. |
+| `src/text.rs` | Splits a caption into Sinhala and English runs, applies the glossary, groups words into lines. Grouping picks the cut points over a whole stretch of speech (pauses, commas, balance, English phrases, attached words) with a small dynamic program. |
 | `src/audio.rs` | Pure Rust audio extraction (symphonia) with its own windowed-sinc resampler. No ffmpeg. |
 | `src/eleven.rs` | The only network code. One address, timeouts, size limits. |
 | `src/secrets.rs` | The API key in Windows Credential Manager. |

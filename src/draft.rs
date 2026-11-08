@@ -704,8 +704,6 @@ fn restore_with(project: &Path, check_capcut: bool) -> Result<usize, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::text::tests::golden_glossary;
-    use crate::text::{group_tokens, Glossary, Grouping};
 
     fn golden() -> Value {
         serde_json::from_str(include_str!("../tests/fixtures/golden.json")).unwrap()
@@ -724,22 +722,18 @@ mod tests {
         }
     }
 
+    /// The captions the fixture expects. This test is about editing the draft, not about grouping.
     fn caps() -> Vec<Token> {
-        let toks: Vec<Token> = golden()["transcript_words"]
+        golden()["captions"]
             .as_array()
             .unwrap()
             .iter()
-            .filter(|w| w.get("type").is_none_or(|t| t == "word"))
-            .map(|w| Token {
-                text: w["text"].as_str().unwrap().into(),
-                start: w["start"].as_f64().unwrap(),
-                end: w["end"].as_f64().unwrap(),
+            .map(|c| Token {
+                text: c["text"].as_str().unwrap().into(),
+                start: c["start"].as_f64().unwrap(),
+                end: c["end"].as_f64().unwrap(),
             })
-            .collect();
-        group_tokens(
-            &Glossary::new(&golden_glossary()).restore(&toks),
-            &Grouping::default(),
-        )
+            .collect()
     }
 
     /// Replace every UUID by its order of first appearance, so random ids compare equal.

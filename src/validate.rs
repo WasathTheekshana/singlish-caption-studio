@@ -25,12 +25,23 @@ pub struct Lang {
     pub bold: bool,
 }
 
+pub const MIN_WORDS_PER_CAPTION: usize = 2;
+pub const MAX_WORDS_PER_CAPTION: usize = 10;
+pub const DEFAULT_WORDS_PER_CAPTION: usize = 4;
+
+fn default_words() -> usize {
+    DEFAULT_WORDS_PER_CAPTION
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Settings {
     pub sinhala: Lang,
     pub english: Lang,
     pub color: [f64; 3],
     pub position_y: f64,
+    /// The most words in one caption box. Longer sentences are split at natural pauses.
+    #[serde(default = "default_words")]
+    pub max_words: usize,
 }
 
 fn in_range(v: f64, lo: f64, hi: f64) -> bool {
@@ -56,6 +67,11 @@ pub fn check_settings(s: &Settings, installed_fonts: &[String]) -> Result<(), St
     if !in_range(s.position_y, -1.0, 1.0) {
         return Err("Caption height must be between -1 and 1.".into());
     }
+    if !(MIN_WORDS_PER_CAPTION..=MAX_WORDS_PER_CAPTION).contains(&s.max_words) {
+        return Err(format!(
+            "Words per caption must be between {MIN_WORDS_PER_CAPTION} and {MAX_WORDS_PER_CAPTION}."
+        ));
+    }
     Ok(())
 }
 
@@ -77,6 +93,7 @@ mod tests {
             },
             color: [1.0, 1.0, 1.0],
             position_y: -0.45,
+            max_words: 4,
         }
     }
     fn fonts() -> Vec<String> {
@@ -130,6 +147,19 @@ mod tests {
         let mut s = settings();
         s.position_y = f64::INFINITY;
         assert!(check_settings(&s, &fonts()).is_err());
+        for bad in [0, 1, 11, 500] {
+            let mut s = settings();
+            s.max_words = bad;
+            assert!(
+                check_settings(&s, &fonts()).is_err(),
+                "{bad} words should be refused"
+            );
+        }
+        for good in [2, 4, 10] {
+            let mut s = settings();
+            s.max_words = good;
+            assert!(check_settings(&s, &fonts()).is_ok());
+        }
     }
 
     #[test]

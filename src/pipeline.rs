@@ -52,6 +52,8 @@ pub struct Deps<'a> {
     pub check_capcut: bool,
     /// Where to report usage. Tests leave this empty or collect the runs.
     pub record: Option<&'a dyn Fn(usage::Run)>,
+    /// How captions are split: the most words in one box, and where the limits are.
+    pub grouping: Grouping,
     /// Saves the captions as an .srt file and returns its name. Tests leave this empty.
     pub save_srt: Option<SrtSaver<'a>>,
 }
@@ -273,6 +275,7 @@ pub fn run(
             glossary: Glossary::new(&store::load_glossary()),
             check_capcut: true,
             record: Some(&save),
+            grouping: Grouping::with_max_words(cfg.style.max_words),
             save_srt: Some(&save_srt),
         };
         run_with(project, selected, emit, &deps)
@@ -395,7 +398,7 @@ pub fn run_with(
             });
             captions.extend(group_tokens(
                 &deps.glossary.restore(&mapped),
-                &Grouping::default(),
+                &deps.grouping,
             ));
         }
     }
@@ -664,6 +667,7 @@ mod tests {
             glossary: Glossary::new(&Default::default()),
             check_capcut: false,
             record: None,
+            grouping: Grouping::default(),
             save_srt: None,
         };
         run_with(&f.project, selected, &|_| {}, &deps)
@@ -686,6 +690,7 @@ mod tests {
             glossary: Glossary::new(&Default::default()),
             check_capcut: false,
             record: None,
+            grouping: Grouping::default(),
             save_srt: Some(&save),
         };
         let emit = |ev: Value| {
@@ -718,6 +723,7 @@ mod tests {
             glossary: Glossary::new(&Default::default()),
             check_capcut: false,
             record: None,
+            grouping: Grouping::default(),
             save_srt: Some(&save),
         };
         let events = RefCell::new(Vec::new());
@@ -874,6 +880,7 @@ mod tests {
             glossary: Glossary::new(&Default::default()),
             check_capcut: false,
             record: Some(&rec),
+            grouping: Grouping::default(),
             save_srt: None,
         };
         let out = run_with(&f.project, selected, &|_| {}, &deps);

@@ -36,6 +36,7 @@ It is a small Windows app. You pick a CapCut project, press one button, and the 
 - Works with projects that have many clips, trims and speed changes.
 - Turns English words that came back in Sinhala letters into English, using a list you can edit.
 - Applies your own Sinhala font and English font, sizes, color and position.
+- Lets you set the most words in one caption, and splits longer sentences where you pause.
 - Saves the same captions as an `.srt` file, so you can upload them with your video on YouTube or Facebook.
 - Shows how much audio each run used, per project and per clip.
 - Backs up the project file before every change, and can restore it.
@@ -84,6 +85,12 @@ Every run also saves the captions as a SubRip file in `Documents\Singlish Captio
 - **Facebook:** in Edit video, open Captions and choose Upload SRT file. Facebook needs the language code in the file name, which is why the name ends in `.si_LK.srt`.
 
 The times follow your CapCut timeline, so export the whole timeline from CapCut for them to line up. TikTok's normal upload has no place for a caption file, as far as I can tell, so there the captions need to be part of the video.
+
+### How long a caption is
+
+In Settings, Style, **Most words in one caption** sets the longest a caption box can be, from 2 to 10 words. If captions run off the edge of the screen, lower it.
+
+When a sentence is longer than that, the app does not just cut at the limit. It looks at the whole stretch of speech and breaks it where you actually paused or put a comma, keeps the pieces about the same size so you do not get a lone word on its own, keeps an English phrase like "new phone" together, and keeps words like `එක` with the word they belong to. A sentence that already fits is left alone. A pause of more than about half a second, or the end of a sentence, always starts a new caption.
 
 ### The glossary
 

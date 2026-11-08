@@ -153,6 +153,7 @@ pub fn default_config(fonts: &[Font]) -> AppConfig {
             },
             color: [1.0, 1.0, 1.0],
             position_y: -0.45,
+            max_words: crate::validate::DEFAULT_WORDS_PER_CAPTION,
         },
         setup_done: false,
         price_per_minute: None,

@@ -180,6 +180,11 @@
         <label class="check inline"><input id="en-bold" type="checkbox"><span>Bold</span></label>
       </fieldset>
       <fieldset>
+        <legend>Caption length</legend>
+        <label>Most words in one caption <output id="mw-out"></output><input id="max-words" type="range" min="2" max="10" step="1"></label>
+        <p class="muted small-text">Longer sentences are split where you pause or at a comma, and words that belong together stay together. Lower it if captions run off the screen.</p>
+      </fieldset>
+      <fieldset>
         <legend>Layout</legend>
         <label>Text color <input id="color" type="color"></label>
         <label>Height on screen <output id="y-out"></output><input id="pos-y" type="range" min="-0.9" max="0.9" step="0.05"></label>

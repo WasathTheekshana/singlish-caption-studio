@@ -143,7 +143,7 @@ $("wz-finish").addEventListener("click", async () => {
   const settings = {
     sinhala: { font: $("wz-si-font").value, size: +$("wz-si-size").value, bold: false },
     english: { font: $("wz-en-font").value, size: +$("wz-en-size").value, bold: s.english.bold },
-    color: s.color, position_y: s.position_y,
+    color: s.color, position_y: s.position_y, max_words: s.max_words,
   };
   try {
     await invoke("save_settings", { settings });
@@ -405,6 +405,7 @@ function stylePreview() {
   paintPreview(["pv-si", "pv-en", "pv-si2"], { siFont: $("si-font").value, siSize: +$("si-size").value, enFont: $("en-font").value, enSize: +$("en-size").value, bold: $("en-bold").checked, color: $("color").value });
   $("si-size-out").textContent = $("si-size").value;
   $("en-size-out").textContent = $("en-size").value;
+  $("mw-out").textContent = $("max-words").value;
   const y = +$("pos-y").value;
   $("y-out").textContent = y < -0.3 ? "Low" : y > 0.3 ? "High" : "Middle";
   note("font-warn", isCollection($("si-font").value) || isCollection($("en-font").value) ? COLLECTION_WARN : "", "warn");
@@ -421,6 +422,7 @@ async function loadStyleTab() {
     $("en-bold").checked = s.english.bold;
     $("color").value = toHex(s.color);
     $("pos-y").value = s.position_y;
+    $("max-words").value = s.max_words;
     stylePreview();
   } catch (e) { note("settings-msg", msg(e), "bad"); }
 }
@@ -445,12 +447,12 @@ $("close-settings").addEventListener("click", closeSettings);
 $("scrim").addEventListener("click", closeSettings);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("settings").hidden) closeSettings(); });
 document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => selectTab(t.dataset.tab)));
-["si-font", "en-font", "si-size", "en-size", "en-bold", "color", "pos-y"].forEach((id) => $(id).addEventListener("input", stylePreview));
+["si-font", "en-font", "si-size", "en-size", "en-bold", "color", "pos-y", "max-words"].forEach((id) => $(id).addEventListener("input", stylePreview));
 $("save-settings").addEventListener("click", async () => {
   const settings = {
     sinhala: { font: $("si-font").value, size: +$("si-size").value, bold: false },
     english: { font: $("en-font").value, size: +$("en-size").value, bold: $("en-bold").checked },
-    color: fromHex($("color").value), position_y: +$("pos-y").value,
+    color: fromHex($("color").value), position_y: +$("pos-y").value, max_words: +$("max-words").value,
   };
   try { await invoke("save_settings", { settings }); note("settings-msg", "Saved. New captions will use this style.", "ok"); }
   catch (e) { note("settings-msg", msg(e), "bad"); }

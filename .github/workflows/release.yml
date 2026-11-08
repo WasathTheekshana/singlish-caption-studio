@@ -59,9 +59,16 @@ jobs:
             Write-Error "Cargo.toml says $cargo but tauri.conf.json says $tauri"
             exit 1
           }
-          if ($env:TAG -and "v$cargo" -ne $env:TAG) {
-            Write-Error "Tag $env:TAG does not match the version $cargo in the project files"
-            exit 1
+          if ($env:TAG) {
+            # A tag is "v0.1.0", or "singlish-caption-studio-v0.1.0" when the package name is part of it.
+            if ($env:TAG -notmatch '^(?:[A-Za-z0-9._-]+-)?v(?<version>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$') {
+              Write-Error "Unexpected tag name $env:TAG"
+              exit 1
+            }
+            if ($Matches['version'] -ne $cargo) {
+              Write-Error "Tag $env:TAG does not match the version $cargo in the project files"
+              exit 1
+            }
           }
           Write-Host "Building version $cargo"
 

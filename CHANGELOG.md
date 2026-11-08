@@ -2,6 +2,13 @@
 
 Release notes are written from the commit messages when a release is made, so nobody edits this file by hand. See [docs/releasing.md](docs/releasing.md).
 
+## [0.4.0](https://github.com/WasathTheekshana/singlish-caption-studio/compare/singlish-caption-studio-v0.3.0...singlish-caption-studio-v0.4.0) (2026-11-08)
+
+
+### Features
+
+* choose the most words in one caption and split at natural pauses ([196f1a2](https://github.com/WasathTheekshana/singlish-caption-studio/commit/196f1a294090ca9e69e6573bd08b959a47520647))
+
 ## [0.3.0](https://github.com/WasathTheekshana/singlish-caption-studio/compare/singlish-caption-studio-v0.2.1...singlish-caption-studio-v0.3.0) (2026-11-08)
 
 

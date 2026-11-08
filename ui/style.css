@@ -166,6 +166,12 @@ label output { align-self: flex-end; margin-top: -22px; }
 .usage-table th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 6px 4px 0; }
 .usage-table td { padding: 4px 6px 4px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .usage-table td:first-child { overflow-wrap: anywhere; }
+.update { border: 1px solid var(--ink); border-radius: 6px; padding: 14px 16px; margin-bottom: 18px; background: var(--surface); }
+.update strong { font-weight: 600; }
+.update p { margin-top: 6px; white-space: pre-line; max-height: 7.5em; overflow: auto; }
+.update .notice { white-space: normal; }
+.bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .2s; }
 .about h3 { font: 600 13px var(--sans); margin: 6px 0 -8px; }
 .about-name { font: 400 20px var(--serif); }
 @media (max-height: 680px) { header { padding-bottom: 12px; } .card { padding: 14px 0; } }

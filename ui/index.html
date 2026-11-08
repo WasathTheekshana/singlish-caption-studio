@@ -83,6 +83,17 @@
       <button id="open-settings" class="icon-btn" type="button">Settings</button>
     </header>
 
+    <section id="update-banner" class="update" hidden aria-live="polite">
+      <strong id="update-title"></strong>
+      <p id="update-notes" class="muted small-text"></p>
+      <div id="update-bar" class="bar" hidden><i></i></div>
+      <p id="update-msg" class="notice" hidden></p>
+      <div class="actions">
+        <button id="update-now" class="primary small" type="button">Update now</button>
+        <button id="update-later" class="secondary" type="button">Not now</button>
+      </div>
+    </section>
+
     <section class="card" aria-labelledby="h-project">
       <h2 id="h-project">Project</h2>
       <div id="project-list" class="list" role="listbox" aria-label="CapCut projects" tabindex="0"></div>
@@ -227,6 +238,10 @@
       <p>Wasath. I make videos in Sinhala with a lot of English words in them, and I got tired of fixing captions by hand. This is the tool I wanted, shared in case it helps you too.</p>
       <h3>Privacy</h3>
       <p>The audio of the clips you pick is sent to ElevenLabs to be turned into text. Nothing else leaves your computer. Your key stays in Windows Credential Manager. There is no tracking and no account.</p>
+      <h3>Updates</h3>
+      <p id="update-status" class="muted">Checks GitHub for a newer version. Nothing is installed until you press Update.</p>
+      <label class="check"><input id="auto-update" type="checkbox"><span>Check for updates when the app starts</span></label>
+      <div class="actions"><button id="check-update" class="secondary" type="button">Check for updates</button></div>
       <h3>License</h3>
       <p>Free and open source under the MIT license.</p>
       <p class="muted small-text">This is an independent project. It is not affiliated with or endorsed by CapCut, ByteDance or ElevenLabs.</p>

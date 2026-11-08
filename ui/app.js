@@ -161,6 +161,7 @@ function startMain() {
   $("consent").checked = state.consent;
   loadProjects();
   updateButton();
+  startupUpdateCheck();
 }
 $("consent").addEventListener("change", (e) => {
   state.consent = e.target.checked;
@@ -580,9 +581,90 @@ $("usage-clear").addEventListener("click", async () => {
 // ------------------------------------------------------------------ about
 async function loadAbout() {
   try { const i = await invoke("app_info"); $("about-version").textContent = `version ${i.version}`; } catch { /* the page still reads fine */ }
+  loadUpdateSettings();
 }
 $("about-coffee").addEventListener("click", async () => {
   try { await invoke("open_link", { which: "coffee" }); } catch { /* nothing useful to show */ }
+});
+
+// ------------------------------------------------------------------ updates
+let offered = null;
+
+function showOffer(r) {
+  offered = r;
+  $("update-title").textContent = `Version ${r.version} is available (you have ${r.current})`;
+  $("update-notes").textContent = r.notes || "";
+  show("update-notes", !!r.notes);
+  note("update-msg", "", "");
+  show("update-bar", false);
+  $("update-now").disabled = false;
+  $("update-later").disabled = false;
+  show("update-banner", true);
+}
+
+async function lookForUpdate(quiet) {
+  try {
+    const r = await invoke("check_update");
+    if (r.available) {
+      showOffer(r);
+      if (!quiet) note("update-status", `Version ${r.version} is available. Close Settings to update.`, "ok");
+    } else if (!quiet) {
+      note("update-status", `You are up to date (version ${r.current}).`, "ok");
+    }
+  } catch (e) {
+    if (!quiet) note("update-status", msg(e), "warn");
+  }
+}
+
+async function startupUpdateCheck() {
+  try {
+    const s = await invoke("get_update_settings");
+    if (s.auto_check) lookForUpdate(true);
+  } catch { /* an update check is never worth an error on startup */ }
+}
+
+async function loadUpdateSettings() {
+  try {
+    const s = await invoke("get_update_settings");
+    $("auto-update").checked = s.auto_check;
+  } catch { /* leave the box as it is */ }
+}
+$("auto-update").addEventListener("change", async (e) => {
+  try { await invoke("set_auto_update_check", { enabled: e.target.checked }); }
+  catch (err) { e.target.checked = !e.target.checked; note("update-status", msg(err), "bad"); }
+});
+$("check-update").addEventListener("click", () => {
+  note("update-status", "Checking...", "");
+  lookForUpdate(false);
+});
+$("update-later").addEventListener("click", () => show("update-banner", false));
+$("update-now").addEventListener("click", async () => {
+  if (!offered) return;
+  $("update-now").disabled = true;
+  $("update-later").disabled = true;
+  note("update-msg", "Starting the download...", "");
+  show("update-bar", true);
+  try {
+    await invoke("install_update");
+    // On Windows the app closes and restarts itself, so this line is normally never reached.
+    note("update-msg", "Installed. Restart the app to use the new version.", "ok");
+  } catch (e) {
+    note("update-msg", msg(e), "bad");
+    show("update-bar", false);
+    $("update-now").disabled = false;
+    $("update-later").disabled = false;
+  }
+});
+listen("update-event", (e) => {
+  const ev = e.payload;
+  if (ev.event === "progress") {
+    const p = ev.percent;
+    $("update-bar").firstElementChild.style.width = p == null ? "40%" : `${p}%`;
+    note("update-msg", p == null ? "Downloading..." : `Downloading ${p}%`, "");
+  } else if (ev.event === "installing") {
+    $("update-bar").firstElementChild.style.width = "100%";
+    note("update-msg", "Installing. The app will restart by itself.", "");
+  }
 });
 
 // ------------------------------------------------------------------ start

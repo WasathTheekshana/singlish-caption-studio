@@ -2,6 +2,13 @@
 
 Release notes are written from the commit messages when a release is made, so nobody edits this file by hand. See [docs/releasing.md](docs/releasing.md).
 
+## [0.2.1](https://github.com/WasathTheekshana/singlish-caption-studio/compare/singlish-caption-studio-v0.2.0...singlish-caption-studio-v0.2.1) (2026-11-08)
+
+
+### Bug Fixes
+
+* show the star history chart in the README ([abad1ae](https://github.com/WasathTheekshana/singlish-caption-studio/commit/abad1ae26940bb948605e7103304eb0249e282bf))
+
 ## [0.2.0](https://github.com/WasathTheekshana/singlish-caption-studio/compare/singlish-caption-studio-v0.1.0...singlish-caption-studio-v0.2.0) (2026-11-08)
 
 

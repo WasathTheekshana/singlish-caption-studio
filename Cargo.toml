@@ -21,7 +21,7 @@ serde = { version = "1", features = ["derive"] }
 # preserve_order keeps CapCut's JSON key order when we rewrite a draft.
 serde_json = { version = "1", features = ["preserve_order"] }
 uuid = { version = "1", features = ["v4"] }
-sha2 = "0.10"
+sha2 = "0.11"
 winreg = "0.55"
 # Secrets live in Windows Credential Manager, never in a file.
 keyring = { version = "3", features = ["windows-native"] }
